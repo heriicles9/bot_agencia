@@ -58,7 +58,7 @@ def processar_mensagem_direct(event):
 
         # --- FILTRO DE CONVERSA HUMANA ---
         # Se a pessoa mandou um texto longo (> 50 letras), ignora.
-        if len(texto) > 20:
+        if len(texto) > 50:
             print(f"   💤 Texto longo ({len(texto)} chars). Ignorando para não atrapalhar conversa.")
             return
 
