@@ -67,7 +67,7 @@ def processar_mensagem_direct(event):
         if any(p in texto for p in PALAVRAS_CHAVE):
             print("   ✅ Gatilho detectado! Tentando enviar resposta...")
             
-            resposta = f"Opa! Tudo bem? 😄\nVi seu interesse! Aqui está o meu Whatsapp: {LINK_WHATSAPP}"
+            resposta = f"Fala boleiro! Tudo bem? 😄\nVi seu interesse! Aqui está o meu Whatsapp: {LINK_WHATSAPP}"
             sucesso = enviar_mensagem_texto(sender_id, resposta)
             
             if sucesso:
