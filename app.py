@@ -58,7 +58,7 @@ def processar_mensagem_direct(event):
 
         # --- FILTRO DE CONVERSA HUMANA ---
         # Se a pessoa mandou um texto longo (> 50 letras), ignora.
-        if len(texto) > 50:
+        if len(texto) > 20:
             print(f"   💤 Texto longo ({len(texto)} chars). Ignorando para não atrapalhar conversa.")
             return
 
@@ -67,7 +67,7 @@ def processar_mensagem_direct(event):
         if any(p in texto for p in PALAVRAS_CHAVE):
             print("   ✅ Gatilho detectado! Tentando enviar resposta...")
             
-            resposta = f"Opa! Tudo bem? 😄\nVi seu interesse! Aqui está o link do nosso Grupo VIP: {LINK_WHATSAPP}"
+            resposta = f"Opa! Tudo bem? 😄\nVi seu interesse! Aqui está o meu Whatsapp: {LINK_WHATSAPP}"
             sucesso = enviar_mensagem_texto(sender_id, resposta)
             
             if sucesso:
