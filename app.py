@@ -7,12 +7,24 @@ app = Flask(__name__)
 
 # --- CONFIGURAÇÕES DINÂMICAS ---
 ACCESS_TOKEN = os.getenv("FACEBOOK_ACCESS_TOKEN")
-VERIFY_TOKEN = os.getenv("FACEBOOK_VERIFY_TOKEN", "minha_senha_padrao")
+VERIFY_TOKEN = os.getenv("FACEBOOK_VERIFY_TOKEN", "minha_senha_secreta_ninja")
 MEU_ID_DO_INSTAGRAM = os.getenv("INSTAGRAM_ACCOUNT_ID")
 LINK_WHATSAPP = os.getenv("CLIENTE_LINK_WHATSAPP")
 
-palavras_env = os.getenv("PALAVRAS_CHAVE", "preço,valor,link,eu quero,🔥,😍,👏,❤️,😮")
-PALAVRAS_CHAVE = [p.strip().lower() for p in palavras_env.split(",")]
+# --- MENSAGENS PERSONALIZÁVEIS (LÊ DO RENDER) ---
+# O texto padrão (depois da vírgula) é usado se você não configurar nada no Render.
+# Nota: O código substitui automaticamente {link} pelo seu link do WhatsApp.
+MSG_VENDA_PADRAO = os.getenv("MSG_VENDA", "Olá! Tudo bem? 😄\nVi seu interesse! Aqui está o meu Whatsapp:\n{link}")
+MSG_BOAS_VINDAS_PADRAO = os.getenv("MSG_BOAS_VINDAS", "Olá! Seja bem-vindo(a)! 👋\nDigite 'preço' para ver ofertas ou me faça uma pergunta!")
+
+# --- LISTAS DE GATILHOS ---
+# 1. Gatilhos de Venda (Interesse)
+env_venda = os.getenv("GATILHOS_VENDA", "preço,valor,link,eu quero,🔥,😍,👏,❤️,😮,comprar")
+GATILHOS_VENDA = [p.strip().lower() for p in env_venda.split(",")]
+
+# 2. Gatilhos de Boas-Vindas (Saudação)
+env_ola = os.getenv("GATILHOS_BOAS_VINDAS", "oi,olá,ola,bom dia,boa tarde,boa noite,start,começar,cheguei,loja")
+GATILHOS_BOAS_VINDAS = [p.strip().lower() for p in env_ola.split(",")]
 
 comentarios_processados = set()
 mensagens_processadas = set()
@@ -56,25 +68,36 @@ def processar_mensagem_direct(event):
         if msg_id in mensagens_processadas: return
         if not texto: return
 
-        # --- FILTRO DE CONVERSA HUMANA ---
-        # Se a pessoa mandou um texto longo (> 50 letras), ignora.
-        if len(texto) > 50:
-            print(f"   💤 Texto longo ({len(texto)} chars). Ignorando para não atrapalhar conversa.")
+        # Filtro de texto muito longo (opcional, mantive o seu)
+        if len(texto) > 100:
+            print(f"   💤 Texto longo ({len(texto)} chars). Ignorando.")
             return
 
         print(f"📩 Direct/Story de {sender_id}: {texto}")
 
-        if any(p in texto for p in PALAVRAS_CHAVE):
-            print("   ✅ Gatilho detectado! Tentando enviar resposta...")
+        resposta_final = ""
+
+        # LÓGICA DE ESCOLHA DA MENSAGEM
+        if any(p in texto for p in GATILHOS_VENDA):
+            print("   ✅ Gatilho de VENDA detectado!")
+            # Pega msg de venda e troca o {link} pelo link real
+            resposta_final = MSG_VENDA_PADRAO.replace("{link}", LINK_WHATSAPP or "")
             
-            resposta = f"Fala boleiro! Tudo bem? 😄\nVi seu interesse! Aqui está o meu Whatsapp:\n {LINK_WHATSAPP}"
-            sucesso = enviar_mensagem_texto(sender_id, resposta)
+        elif any(p in texto for p in GATILHOS_BOAS_VINDAS):
+            print("   👋 Gatilho de BOAS-VINDAS detectado!")
+            resposta_final = MSG_BOAS_VINDAS_PADRAO
+        
+        # Se encontrou uma resposta, envia
+        if resposta_final:
+            # Corrige a quebra de linha que vem do Render (transforma \n escrito em Enter real)
+            resposta_final = resposta_final.replace(r'\n', '\n')
             
+            sucesso = enviar_mensagem_texto(sender_id, resposta_final)
             if sucesso:
                 mensagens_processadas.add(msg_id)
-                print("   🏆 Resposta enviada e confirmada!")
-            else:
-                print("   🚫 Falha no envio (Veja o erro acima)")
+                print("   🏆 Resposta enviada!")
+        else:
+            print("   💤 Sem gatilho conhecido.")
 
     except Exception as e:
         print(f"❌ Erro no processamento Direct: {e}")
@@ -90,10 +113,14 @@ def processar_comentario_feed(change):
             if autor_id == MEU_ID_DO_INSTAGRAM: return
             if comentario_id in comentarios_processados: return
 
-            if any(p in texto for p in PALAVRAS_CHAVE):
-                print(f"💬 Comentário: {texto}")
-                msg_direct = f"Olá! 👋 Aqui está o link que pediu: {LINK_WHATSAPP}"
+            # Nos comentários, usamos sempre a lógica de VENDA (interesse)
+            if any(p in texto for p in GATILHOS_VENDA):
+                print(f"💬 Comentário Venda: {texto}")
                 
+                # Monta a mensagem de venda
+                msg_direct = MSG_VENDA_PADRAO.replace("{link}", LINK_WHATSAPP or "")
+                msg_direct = msg_direct.replace(r'\n', '\n')
+
                 enviar_direct_pelo_comentario(comentario_id, msg_direct)
                 enviar_resposta_publica(comentario_id, "Te enviei o link no Direct! 📥")
                 
@@ -101,7 +128,7 @@ def processar_comentario_feed(change):
     except Exception as e:
         print(f"❌ Erro Comentário: {e}")
 
-# --- FUNÇÕES DE ENVIO COM DEBUG 🕵️‍♂️ ---
+# --- FUNÇÕES DE ENVIO ---
 
 def enviar_mensagem_texto(recipient_id, texto):
     url = f"https://graph.facebook.com/v18.0/me/messages?access_token={ACCESS_TOKEN}"
@@ -109,15 +136,12 @@ def enviar_mensagem_texto(recipient_id, texto):
         "recipient": {"id": recipient_id},
         "message": {"text": texto}
     }
-    # Aqui está o segredo: Capturamos a resposta 'r'
     r = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
     
     if r.status_code == 200:
         return True
     else:
-        # Se der erro, ELE VAI GRITAR NO LOG AGORA
-        print(f"⚠️ ERRO API FACEBOOK: {r.status_code}")
-        print(f"📜 Detalhe: {r.text}")
+        print(f"⚠️ ERRO API FACEBOOK: {r.status_code} - {r.text}")
         return False
 
 def enviar_direct_pelo_comentario(comment_id, mensagem):
