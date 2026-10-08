@@ -623,7 +623,7 @@ def consultar_gemini(persona_loja, pergunta_cliente):
 
         # O modelo recomendado para automações rápidas e gratuitas
         response = gemini_client.models.generate_content(
-            model='gemini-3.8-flash',
+            model='gemini-3.5-flash',
             contents=prompt_sistema
         )
         return response.text.strip()
