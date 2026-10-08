@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f8fc">
+    <title>Configure seu negócio | IGent</title>
+    <style>
+        :root {
+            --ink: #172033;
+            --muted: #69758b;
+            --line: #e7ebf2;
+            --brand: #5b57e7;
+            --brand-dark: #4642c8;
+            --brand-soft: #f0efff;
+        }
+        * { box-sizing: border-box; }
+        body {
+            display: grid;
+            min-height: 100vh;
+            place-items: center;
+            margin: 0;
+            padding: 24px;
+            background:
+                radial-gradient(ellipse at 15% 5%, rgba(115, 109, 246, .12), transparent 34%),
+                #f6f8fc;
+            color: var(--ink);
+            font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+        .card {
+            width: min(680px, 100%);
+            padding: clamp(24px, 6vw, 48px);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            background: #fff;
+            box-shadow: 0 24px 70px rgba(35, 47, 79, .1);
+        }
+        .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+        .brand-mark {
+            display: grid;
+            width: 38px;
+            height: 38px;
+            place-items: center;
+            border-radius: 13px;
+            background: linear-gradient(145deg, #746df6, #514bd7);
+            color: white;
+            font-size: 20px;
+        }
+        .brand-name { font-size: 18px; font-weight: 800; letter-spacing: -.04em; }
+        .eyebrow { margin: 0 0 7px; color: var(--brand); font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+        h1 { margin: 0 0 9px; font-size: clamp(26px, 5vw, 34px); line-height: 1.2; letter-spacing: -.045em; }
+        .intro { margin: 0 0 27px; color: var(--muted); }
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .option { position: relative; }
+        .option input { position: absolute; opacity: 0; pointer-events: none; }
+        .option label {
+            display: block;
+            min-height: 160px;
+            padding: 20px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: border-color .15s ease, background .15s ease, box-shadow .15s ease, transform .15s ease;
+        }
+        .option label:hover { transform: translateY(-2px); border-color: #c8c5ff; }
+        .option input:checked + label { border-color: var(--brand); background: #fafaff; box-shadow: 0 0 0 3px rgba(91, 87, 231, .11); }
+        .option input:focus-visible + label { outline: 3px solid rgba(91, 87, 231, .35); outline-offset: 3px; }
+        .option-icon { display: block; margin-bottom: 15px; font-size: 29px; }
+        .option-title { display: block; margin-bottom: 5px; font-size: 16px; font-weight: 800; }
+        .option-description { display: block; color: var(--muted); font-size: 12px; }
+        .error { margin: 17px 0 0; color: #b42332; font-size: 13px; font-weight: 650; }
+        .submit {
+            display: flex;
+            width: 100%;
+            min-height: 50px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 22px;
+            border: 0;
+            border-radius: 11px;
+            background: var(--brand);
+            color: white;
+            cursor: pointer;
+            font: inherit;
+            font-weight: 750;
+            box-shadow: 0 9px 20px rgba(91, 87, 231, .2);
+        }
+        .submit:hover { background: var(--brand-dark); }
+        .footnote { margin: 15px 0 0; color: var(--muted); font-size: 12px; text-align: center; }
+        @media (max-width: 540px) {
+            body { padding: 14px; }
+            .card { border-radius: 18px; }
+            .options { grid-template-columns: 1fr; }
+            .option label { min-height: 0; }
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <div class="brand">
+            <span class="brand-mark" aria-hidden="true">✦</span>
+            <span class="brand-name">IGent</span>
+        </div>
+        <p class="eyebrow">Vamos preparar seu assistente</p>
+        <h1>Que tipo de negócio você tem?</h1>
+        <p class="intro">Vamos sugerir respostas e instruções iniciais. Depois, você pode editar tudo para ficar com a cara da sua marca.</p>
+
+        <form method="POST">
+            <div class="options">
+                <div class="option">
+                    <input id="segmento-loja" type="radio" name="segmento" value="loja" required>
+                    <label for="segmento-loja">
+                        <span class="option-icon" aria-hidden="true">🛍️</span>
+                        <span class="option-title">Loja</span>
+                        <span class="option-description">Moda, eletrônicos, beleza, presentes e outros varejos.</span>
+                    </label>
+                </div>
+                <div class="option">
+                    <input id="segmento-supermercado" type="radio" name="segmento" value="supermercado" required>
+                    <label for="segmento-supermercado">
+                        <span class="option-icon" aria-hidden="true">🛒</span>
+                        <span class="option-title">Supermercado</span>
+                        <span class="option-description">Mercados, mercearias e lojas de conveniência.</span>
+                    </label>
+                </div>
+            </div>
+            {% if erro %}<p class="error" role="alert">{{ erro }}</p>{% endif %}
+            <button class="submit" type="submit">Continuar para personalizar</button>
+            <p class="footnote">Os modelos são apenas um ponto de partida e não substituem os dados reais do seu negócio.</p>
+        </form>
+    </main>
+</body>
+</html>
