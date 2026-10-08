@@ -45,17 +45,6 @@
             gap: 20px;
         }
         .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-        .brand-mark {
-            display: grid;
-            place-items: center;
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
-            background: linear-gradient(145deg, #746df6, #514bd7);
-            color: white;
-            font-size: 21px;
-            box-shadow: 0 7px 16px rgba(91, 87, 231, .25);
-        }
         .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -.04em; }
         .brand-caption { color: var(--muted); font-size: 12px; }
         .top-actions { display: flex; align-items: center; gap: 16px; }
@@ -287,7 +276,7 @@
     <div class="topbar">
         <div class="topbar-inner">
             <a class="brand" href="/" aria-label="IGent, início">
-                <span class="brand-mark" aria-hidden="true">✦</span>
+                <img src="{{ url_for('static', filename='Logo.png') }}" alt="IGent Pro" style="height: 40px; width: auto; border-radius: 8px;">
                 <span>
                     <span class="brand-name">IGent</span><br>
                     <span class="brand-caption">Automação de atendimento</span>

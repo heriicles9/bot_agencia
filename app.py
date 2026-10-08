@@ -54,7 +54,11 @@ elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+ps
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = (
-    {"connect_args": {"sslmode": "require"}} if db_url.startswith("postgresql") else {}
+    {
+        "connect_args": {"sslmode": "require"},
+        "pool_pre_ping": True,
+        "pool_recycle": 1800,
+    } if db_url.startswith("postgresql") else {}
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -608,28 +612,31 @@ def webhook_asaas():
 def consultar_gemini(persona_loja, pergunta_cliente):
     pergunta_segura = pergunta_cliente[:250]
 
-    try:
-        if not gemini_client:
-            print("⚠️ ERRO: Cliente do Gemini não configurado (Verifique a GEMINI_API_KEY)!")
-            return None
-
-        prompt_sistema = f"""
-        Você é um atendente virtual.
-        SUAS INSTRUÇÕES: {persona_loja}
-        CLIENTE: "{pergunta_segura}"
-
-        REGRA RÍGIDA: Responda em APENAS 1 frase curta (máximo 15 palavras). Seja direto e nunca saia do personagem.
-        """
-
-        # O modelo recomendado para automações rápidas e gratuitas
-        response = gemini_client.models.generate_content(
-            model='gemini-3.5-flash',
-            contents=prompt_sistema
-        )
-        return response.text.strip()
-    except Exception as e:
-        print(f"❌ ERRO CRÍTICO NO GEMINI: {e}")
+    if not gemini_client:
+        print("⚠️ ERRO: Cliente do Gemini não configurado (Verifique a GEMINI_API_KEY)!")
         return None
+
+    prompt_sistema = f"""
+    Você é um atendente virtual.
+    SUAS INSTRUÇÕES: {persona_loja}
+    CLIENTE: "{pergunta_segura}"
+
+    REGRA RÍGIDA: Responda em APENAS 1 frase curta (máximo 15 palavras). Seja direto e nunca saia do personagem.
+    """
+
+    modelos_para_tentar = ['gemini-3.5-flash', 'gemini-flash-latest']
+    for modelo in modelos_para_tentar:
+        try:
+            response = gemini_client.models.generate_content(
+                model=modelo,
+                contents=prompt_sistema
+            )
+            return response.text.strip()
+        except Exception as e:
+            print(f"⚠️ Falha no modelo {modelo}. Tentando o próximo... Detalhe: {e}")
+
+    print("❌ ERRO CRÍTICO: Todos os modelos Gemini falharam.")
+    return None
 
 def encontrar_resposta(texto, cliente):
     config = cliente.config_json
