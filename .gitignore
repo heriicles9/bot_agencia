@@ -5,3 +5,7 @@ instance/
 ngrok.exe
 .env
 .env.*
+.venv/
+.venv-*/
+.pytest_cache/
+*.py[cod]
