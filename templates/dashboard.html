@@ -350,6 +350,18 @@
                             <textarea id="msg-padrao" name="msg_padrao" style="min-height:150px" placeholder="Ex.: Você é a Carol, atendente da loja. Seja simpática, use frases curtas e não invente preços ou disponibilidade.">{{ config.msg_padrao }}</textarea>
                         </section>
 
+                        <section class="ai-card" aria-labelledby="knowledge-title" style="margin-top:20px;background:linear-gradient(145deg,#faf5ff,#fff);border-color:#d8b4fe">
+                            <h3 id="knowledge-title" style="color:#7e22ce">📚 Base de Conhecimento da Loja</h3>
+                            <p>Informe dados reais para a IA responder sobre preços, horários, entregas e catálogo. Mantenha estas informações atualizadas.</p>
+                            <label class="field-label" for="link-catalogo">Link do catálogo ou site oficial</label>
+                            <input id="link-catalogo" type="url" name="link_catalogo" value="{{ config.link_catalogo|default('', true) }}" placeholder="Ex.: https://meucatalogo.com/loja">
+                            <label class="field-label" for="dados-extras" style="margin-top:14px">Preços, horários e regras de entrega</label>
+                            <textarea id="dados-extras" name="dados_extras" rows="5" placeholder="Ex.:
+- Liquidificador Mondial: R$ 99,90
+- Horário: 8h às 18h
+- Entrega grátis no centro.">{{ config.dados_extras|default('', true) }}</textarea>
+                        </section>
+
                         <section class="ai-card" aria-labelledby="ice-breakers-title" style="margin-top:20px;background:linear-gradient(145deg,#f0f7ff,#fff);border-color:#cce5ff">
                             <h3 id="ice-breakers-title" style="color:#0056b3">❄️ Botões de Início Rápido (Boas-vindas)</h3>
                             <p>Configure até 4 perguntas que aparecerão para o cliente iniciar uma conversa pelo Direct.</p>

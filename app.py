@@ -5,7 +5,7 @@ import hmac
 import requests
 import unicodedata
 from datetime import datetime, timedelta
-from flask import Flask, request, redirect, session, render_template, make_response
+from flask import Flask, request, redirect, session, render_template, make_response, url_for
 from requests_oauthlib import OAuth2Session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
@@ -30,6 +30,7 @@ if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY precisa estar configurada.")
 app.secret_key = SECRET_KEY
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+ADMIN_BASE_PATH = "/painel-adm"
 
 # --- CONFIGURAÇÃO DO NOVO GOOGLE GEMINI (IA) ---
 GENAI_KEY = os.getenv("GEMINI_API_KEY")
@@ -68,6 +69,8 @@ ASAAS_WEBHOOK_TOKEN = os.getenv("ASAAS_WEBHOOK_TOKEN", "")
 DEFAULT_CONFIG = {
     "msg_padrao": "Você é um assistente virtual útil. Responda de forma curta.",
     "msg_comentario_publico": "Oi {nome}! Te chamei no direct.",
+    "link_catalogo": "",
+    "dados_extras": "",
     "fluxos": [{"gatilhos": "preço", "resposta": "R$ 99,00"}],
 }
 
@@ -344,6 +347,8 @@ def dashboard():
             config_atual = dict(config_cliente)
             config_atual['msg_padrao'] = request.form.get('msg_padrao')
             config_atual['msg_comentario_publico'] = request.form.get('msg_comentario_publico')
+            config_atual['link_catalogo'] = request.form.get('link_catalogo', '').strip()
+            config_atual['dados_extras'] = request.form.get('dados_extras', '').strip()
 
             novos_fluxos = []
             for i in range(len(gatilhos_list)):
@@ -459,55 +464,55 @@ def privacidade():
     return render_template("privacidade.html")
 
 
-@app.route("/admin")
+@app.route(ADMIN_BASE_PATH)
 def admin_panel():
     if not session.get('admin_logged_in'): return render_template("admin_login.html")
     todos_clientes = Cliente.query.all()
     return render_template("admin_dashboard.html", clientes=todos_clientes, hoje=datetime.now())
 
-@app.route("/admin/logout")
+@app.route(f"{ADMIN_BASE_PATH}/logout")
 def admin_logout():
     session.pop('admin_logged_in', None)
-    return redirect("/admin")
+    return redirect(url_for("admin_panel"))
 
-@app.route("/admin/login", methods=['POST'])
+@app.route(f"{ADMIN_BASE_PATH}/login", methods=['POST'])
 def admin_login():
     if not ADMIN_PASSWORD:
         app.logger.error("ADMIN_PASSWORD não está configurado.")
         return "Login administrativo não configurado.", 503
     if request.form.get('senha') == ADMIN_PASSWORD:
         session['admin_logged_in'] = True
-        return redirect("/admin")
+        return redirect(url_for("admin_panel"))
     return "❌ Senha incorreta."
 
-@app.route("/admin/renovar/<id>")
+@app.route(f"{ADMIN_BASE_PATH}/renovar/<id>")
 def admin_renovar(id):
-    if not session.get('admin_logged_in'): return redirect("/admin")
+    if not session.get('admin_logged_in'): return redirect(url_for("admin_panel"))
     cliente = db.session.get(Cliente, id)
     if cliente:
         cliente.data_expiracao = datetime.now() + timedelta(days=30)
         cliente.ativo = True
         cliente.plano = "renovado_manual"
         db.session.commit()
-    return redirect("/admin")
+    return redirect(url_for("admin_panel"))
 
-@app.route("/admin/toggle_status/<id>")
+@app.route(f"{ADMIN_BASE_PATH}/toggle_status/<id>")
 def admin_toggle(id):
-    if not session.get('admin_logged_in'): return redirect("/admin")
+    if not session.get('admin_logged_in'): return redirect(url_for("admin_panel"))
     cliente = db.session.get(Cliente, id)
     if cliente:
         cliente.ativo = not cliente.ativo
         db.session.commit()
-    return redirect("/admin")
+    return redirect(url_for("admin_panel"))
 
-@app.route("/admin/excluir/<id>", methods=['POST'])
+@app.route(f"{ADMIN_BASE_PATH}/excluir/<id>", methods=['POST'])
 def admin_excluir(id):
-    if not session.get('admin_logged_in'): return redirect("/admin")
+    if not session.get('admin_logged_in'): return redirect(url_for("admin_panel"))
     cliente = db.session.get(Cliente, id)
     if cliente:
         db.session.delete(cliente)
         db.session.commit()
-    return redirect("/admin")
+    return redirect(url_for("admin_panel"))
 
 @app.route("/logout")
 def logout():
@@ -614,19 +619,33 @@ def webhook_asaas():
 
 # --- WEBHOOK & LÓGICA IA (ATUALIZADA PARA O NOVO SDK GEMINI) ---
 
-def consultar_gemini(persona_loja, pergunta_cliente):
+def consultar_gemini(config_cliente, pergunta_cliente):
     pergunta_segura = pergunta_cliente[:250]
 
     if not gemini_client:
         print("⚠️ ERRO: Cliente do Gemini não configurado (Verifique a GEMINI_API_KEY)!")
         return None
 
-    prompt_sistema = f"""
-    Você é um atendente virtual.
-    SUAS INSTRUÇÕES: {persona_loja}
-    CLIENTE: "{pergunta_segura}"
+    config = config_cliente if isinstance(config_cliente, dict) else {}
+    persona_loja = config.get('msg_padrao') or "Você é um atendente virtual."
+    link_catalogo = config.get('link_catalogo') or "Não temos link no momento."
+    dados_extras = config.get('dados_extras') or "Nenhuma informação extra fornecida."
 
-    REGRA RÍGIDA: Responda em APENAS 1 frase curta (máximo 15 palavras). Seja direto e nunca saia do personagem.
+    prompt_sistema = f"""
+    Você é um atendente virtual de uma loja no Instagram.
+
+    SUA PERSONALIDADE E INSTRUÇÕES:
+    {persona_loja}
+
+    BASE DE CONHECIMENTO DA LOJA:
+    - Link oficial do catálogo ou site: {link_catalogo}
+    - Preços, horários e regras: {dados_extras}
+
+    REGRA DE OURO: Responda usando apenas informações da base de conhecimento e das instruções da loja. Se perguntarem por um preço que consta na base, informe-o. Se pedirem o catálogo e houver um link, forneça-o. Se a informação não estiver disponível, diga com educação que a equipe humana poderá confirmar. Não invente preços, produtos, horários, estoque, links ou políticas.
+
+    PERGUNTA DO CLIENTE: "{pergunta_segura}"
+
+    Responda em apenas uma frase curta e humana.
     """
 
     modelos_para_tentar = ['gemini-3.5-flash', 'gemini-flash-latest']
@@ -654,7 +673,7 @@ def encontrar_resposta(texto, cliente):
 
     persona = config.get('msg_padrao')
     if persona and len(persona) > 5:
-        resposta_ia = consultar_gemini(persona, texto)
+        resposta_ia = consultar_gemini(config, texto)
         if resposta_ia:
             return resposta_ia, True
 
