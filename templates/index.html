@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f7f8fc">
+    <title>IGent | Atendimento inteligente no Instagram</title>
+    <!-- Biblioteca de Animações de Scroll -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <style>
+        :root { --ink: #172033; --muted: #69758b; --brand: #5b57e7; --line: #e7ebf2; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #f7f8fc;
+            color: var(--ink);
+            font: 15px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+        .page { width: min(1080px, calc(100% - 40px)); margin: 0 auto; }
+        header { display: flex; align-items: center; justify-content: space-between; min-height: 82px; }
+        .header-main { display: flex; align-items: center; gap: 30px; }
+        .header-nav { display: flex; gap: 20px; color: var(--muted); font-size: 14px; font-weight: 600; }
+        .header-nav a { color: inherit; text-decoration: none; }
+        .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; }
+        .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -.04em; }
+        .button {
+            display: inline-flex; min-height: 44px; align-items: center; justify-content: center;
+            padding: 0 17px; border-radius: 11px; background: var(--brand); color: white;
+            font-weight: 750; text-decoration: none; box-shadow: 0 8px 18px rgba(91, 87, 231, .2);
+        }
+        .button:hover { background: #4642c8; }
+        .hero {
+            display: grid; grid-template-columns: 1.08fr .92fr; align-items: center; gap: 46px;
+            min-height: 550px; padding: 42px 0 65px;
+        }
+        .eyebrow { margin: 0 0 12px; color: var(--brand); font-size: 11px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+        h1 { max-width: 620px; margin: 0 0 16px; font-size: clamp(38px, 6vw, 62px); line-height: 1.04; letter-spacing: -.06em; }
+        .lead { max-width: 560px; margin: 0 0 25px; color: var(--muted); font-size: 17px; }
+        .hero-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .trial { color: var(--muted); font-size: 12px; }
+        .preview-wrap { position: relative; padding: 20px; }
+        .glow {
+            position: absolute; inset: 6% 2%; border-radius: 35%; background: #e9e8ff;
+            filter: blur(35px); transform: rotate(-10deg);
+        }
+        .preview {
+            position: relative; padding: 24px; border: 1px solid var(--line); border-radius: 23px;
+            background: white; box-shadow: 0 25px 70px rgba(35, 47, 79, .12);
+        }
+        .preview-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .preview-title { font-weight: 800; }
+        .active { padding: 5px 9px; border-radius: 999px; background: #eaf8f1; color: #14845c; font-size: 11px; font-weight: 800; }
+        .preview-label { margin-bottom: 9px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .rule {
+            margin-bottom: 10px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px;
+            background: #fcfdff; font-size: 13px;
+        }
+        .rule strong { display: block; margin-bottom: 3px; }
+        .ai {
+            margin-top: 15px; padding: 15px; border: 1px solid #e1e0ff; border-radius: 13px;
+            background: #f7f6ff; font-size: 12px;
+        }
+        .ai strong { display: block; margin-bottom: 4px; }
+        .features {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; padding-bottom: 62px;
+        }
+        .feature { padding: 19px; border: 1px solid var(--line); border-radius: 15px; background: white; }
+        .feature strong { display: block; margin-bottom: 5px; font-size: 14px; }
+        .feature span { color: var(--muted); font-size: 12px; }
+        .pricing, .faq { padding: 60px 0; }
+        .pricing { text-align: center; }
+        .pricing h2, .faq h2 { margin: 0 0 36px; font-size: 32px; letter-spacing: -.04em; }
+        .pricing-card {
+            max-width: 400px; margin: 0 auto; padding: 36px; border: 2px solid var(--brand);
+            border-radius: 20px; background: white; box-shadow: 0 20px 40px rgba(91, 87, 231, .1);
+        }
+        .pricing-card h3 { margin: 0 0 10px; font-size: 24px; }
+        .pricing-description, .pricing-note, .faq-answer { color: var(--muted); }
+        .pricing-description { margin: 0 0 20px; }
+        .pricing-amount { margin-bottom: 20px; font-size: 48px; font-weight: 800; letter-spacing: -.05em; line-height: 1.2; }
+        .pricing-period { color: var(--muted); font-size: 16px; font-weight: 400; letter-spacing: 0; }
+        .pricing-list { margin: 0 0 28px; padding: 0; color: var(--muted); line-height: 2; list-style: none; text-align: left; }
+        .pricing-list strong { color: var(--ink); }
+        .pricing-card .button { width: 100%; }
+        .pricing-note { margin: 14px 0 0; font-size: 12px; }
+        .faq { max-width: 700px; margin: 0 auto; padding-bottom: 80px; }
+        .faq h2 { text-align: center; }
+        .faq-item { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+        .faq-item:last-child { margin-bottom: 0; }
+        .faq-question { display: block; margin-bottom: 10px; font-size: 18px; }
+        .faq-answer { margin: 0; }
+        .whatsapp-float {
+            position: fixed; right: 25px; bottom: 25px; z-index: 1000; display: flex;
+            width: 60px; height: 60px; align-items: center; justify-content: center;
+            border-radius: 50%; background: #25d366; color: white;
+            box-shadow: 0 10px 25px rgba(37, 211, 102, .4); text-decoration: none;
+            transition: transform .2s;
+        }
+        .whatsapp-float:hover { transform: scale(1.1); }
+        .whatsapp-float:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+        .whatsapp-float svg { width: 30px; height: 30px; }
+        footer { padding: 19px 0 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+        html { scroll-behavior: smooth; }
+        @media (max-width: 760px) {
+            .hero { grid-template-columns: 1fr; gap: 23px; min-height: auto; padding: 44px 0 45px; }
+            .preview-wrap { max-width: 560px; width: 100%; margin: 0 auto; }
+            .features { grid-template-columns: 1fr; padding-bottom: 40px; }
+        }
+        @media (max-width: 480px) {
+            .page { width: min(100% - 28px, 1080px); }
+            header { min-height: 70px; }
+            header .button { min-height: 39px; padding: 0 12px; font-size: 12px; }
+            .header-main { gap: 12px; }
+            .header-nav { gap: 12px; font-size: 12px; }
+            h1 { font-size: 39px; }
+            .lead { font-size: 15px; }
+            .preview-wrap { padding: 8px; }
+            .preview { padding: 17px; }
+            .pricing-card { padding: 28px 22px; }
+            .pricing-amount { font-size: 42px; }
+            .whatsapp-float { right: 18px; bottom: 18px; width: 56px; height: 56px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header>
+            <div class="header-main">
+                <a class="brand" href="/" aria-label="IGent">
+                    <img src="{{ url_for('static', filename='Logo.png') }}" alt="IGent Pro" style="height: 40px; width: auto; border-radius: 8px;">
+                    <span class="brand-name">IGent</span>
+                </a>
+                <nav class="header-nav" aria-label="Navegação principal">
+                    <a href="#planos">Planos</a>
+                    <a href="#faq">Dúvidas</a>
+                </nav>
+            </div>
+            {% if conectado %}
+                <a class="button" href="/dashboard">Abrir meu painel</a>
+            {% else %}
+                <a class="button" href="/login">Conectar Instagram</a>
+            {% endif %}
+        </header>
+
+        <main>
+            <section class="hero">
+                <div data-aos="fade-up">
+                    <p class="eyebrow">Atendimento para lojas e supermercados</p>
+                    <h1>Seu Instagram atendido com o jeito da sua marca.</h1>
+                    <p class="lead">Configure respostas automáticas para mensagens e comentários, escolha um modelo para o seu negócio e personalize cada detalhe.</p>
+                    <div class="hero-actions">
+                        {% if conectado %}
+                            <a class="button" href="/dashboard">Acessar configurações</a>
+                        {% else %}
+                            <a class="button" href="/login">Começar com Instagram</a>
+                        {% endif %}
+                        <span class="trial">Teste grátis de 7 dias</span>
+                    </div>
+                </div>
+                <div class="preview-wrap" aria-label="Exemplo do painel IGent" data-aos="fade-left" data-aos-delay="200">
+                    <div class="glow"></div>
+                    <div class="preview">
+                        <div class="preview-top">
+                            <span class="preview-title">Painel do negócio</span>
+                        </div>
+                        <p class="preview-label">Modelo: supermercado</p>
+                        <div class="rule"><strong>Quando perguntarem sobre ofertas</strong>A equipe confirma as promoções vigentes.</div>
+                        <div class="rule"><strong>Quando perguntarem sobre entrega</strong>Peça o bairro ou CEP para confirmar as opções.</div>
+                        <div class="ai"><strong>✦ Assistente personalizado</strong>Defina a personalidade, o tom de voz e as informações reais do negócio.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="features" aria-label="Benefícios">
+                <div class="feature" data-aos="fade-up" data-aos-delay="100"><strong>Respostas sob medida</strong><span>Crie regras e defina a personalidade da IA para combinar com sua marca.</span></div>
+                <div class="feature" data-aos="fade-up" data-aos-delay="200"><strong>Feito para o seu segmento</strong><span>Comece com um modelo de loja ou supermercado e personalize a partir dele.</span></div>
+                <div class="feature" data-aos="fade-up" data-aos-delay="300"><strong>Mais agilidade no Instagram</strong><span>Automatize respostas a mensagens e comentários para atender com mais consistência.</span></div>
+            </section>
+
+            <section id="planos" class="pricing" aria-labelledby="pricing-title">
+                <p class="eyebrow">Simples e Transparente</p>
+                <h2 id="pricing-title">Plano Único para o seu negócio</h2>
+                <div class="pricing-card">
+                    <h3>Plano Pro</h3>
+                    <p class="pricing-description">Tudo que você precisa para automatizar seu Instagram.</p>
+                    <div class="pricing-amount">R$ 49,90<span class="pricing-period"> /mês</span></div>
+                    <ul class="pricing-list">
+                        <li><strong aria-hidden="true">✓</strong> Respostas com inteligência artificial</li>
+                        <li><strong aria-hidden="true">✓</strong> Respostas no Direct e comentários</li>
+                        <li><strong aria-hidden="true">✓</strong> Modelos para lojas e supermercados</li>
+                        <li><strong aria-hidden="true">✓</strong> Personalização do atendimento</li>
+                    </ul>
+                    <a class="button" href="/login">Começar 7 dias grátis</a>
+                    <p class="pricing-note">Sem compromisso. Cancele quando quiser.</p>
+                </div>
+            </section>
+
+            <section id="faq" class="faq" aria-labelledby="faq-title">
+                <h2 id="faq-title">Dúvidas Frequentes</h2>
+                <div class="faq-item">
+                    <strong class="faq-question">Preciso saber programar para configurar?</strong>
+                    <p class="faq-answer">Não. Você configura as respostas e as orientações da IA pelo painel, sem precisar escrever código.</p>
+                </div>
+                <div class="faq-item">
+                    <strong class="faq-question">Como funciona a conexão com o Instagram?</strong>
+                    <p class="faq-answer">A conexão é feita pelo fluxo de autorização da Meta e usa as APIs oficiais disponíveis para a sua conta. A aprovação e o funcionamento também dependem das permissões e políticas da Meta.</p>
+                </div>
+                <div class="faq-item">
+                    <strong class="faq-question">O que acontece se o cliente quiser falar com uma pessoa?</strong>
+                    <p class="faq-answer">Quando o cliente pede um atendente, o IGent pausa as respostas automáticas para aquela conversa. A equipe pode continuar pelo Instagram e retomar a automação pelo painel quando terminar.</p>
+                </div>
+            </section>
+        </main>
+
+        <footer style="padding:25px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px">
+            <span>&copy; 2026 IGent Pro. Todos os direitos reservados.</span>
+            <div style="display:flex;gap:20px;font-weight:600">
+                <a href="/termos" style="color:inherit;text-decoration:none">Termos de Uso</a>
+                <a href="/privacidade" style="color:inherit;text-decoration:none">Política de Privacidade</a>
+            </div>
+        </footer>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    </script>
+    <a class="whatsapp-float" href="https://wa.me/5575983479259?text=Ol%C3%A1!%20Gostaria%20de%20tirar%20uma%20d%C3%BAvida%20sobre%20o%20IGent%20Pro." target="_blank" rel="noopener noreferrer" aria-label="Fale com a equipe pelo WhatsApp" title="Fale com a equipe pelo WhatsApp">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+        </svg>
+    </a>
+</body>
+</html>
