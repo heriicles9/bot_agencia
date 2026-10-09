@@ -79,10 +79,20 @@
                                 <div class="text-xs text-slate-500 mt-0.5 font-mono">{{ cliente.id }}</div>
                             </td>
                             <td class="p-4">
-                                <span class="bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-md">{{ cliente.plano }}</span>
+                                <form action="{{ url_for('admin_definir_plano', id=cliente.id) }}" method="POST" class="flex items-center gap-2">
+                                    <select name="plano" aria-label="Plano de {{ cliente.nome }}" class="bg-white border border-slate-300 text-xs rounded-md px-2 py-1">
+                                        {% for plano in ['start', 'pro', 'enterprise'] %}
+                                        <option value="{{ plano }}" {% if planos_clientes[cliente.id] == plano %}selected{% endif %}>{{ plano|capitalize }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded">Salvar</button>
+                                </form>
                             </td>
                             <td class="p-4">
                                 <span class="text-sm font-bold text-purple-600"><i class="fa-solid fa-sparkles text-xs"></i> {{ cliente.config_json.get('consumo_ia', 0) if cliente.config_json is mapping else 0 }}</span>
+                                {% if planos_clientes[cliente.id] == 'start' %}
+                                <span class="block text-xs text-slate-500">{{ consumos_mensais[cliente.id] }}/{{ limite_ia_start }} este mês</span>
+                                {% endif %}
                             </td>
                             <td class="p-4 text-sm font-medium text-slate-600">
                                 {{ cliente.data_expiracao.strftime('%d/%m/%Y') if cliente.data_expiracao else 'N/A' }}

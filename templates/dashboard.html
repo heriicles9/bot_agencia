@@ -341,6 +341,25 @@
                                 <input type="checkbox" name="resp_comentarios" value="sim" {% if config.get('resp_comentarios', 'sim') == 'sim' %}checked{% endif %}>
                                 Responder em comentários de publicações
                             </label>
+                            <label class="permission-toggle">
+                                <input type="checkbox" name="resp_mencoes" value="sim" {% if config.get('resp_mencoes', 'sim') == 'sim' %}checked{% endif %}>
+                                Agradecer menções da loja em Stories
+                            </label>
+                        </section>
+
+                        <section class="ai-card" aria-labelledby="manual-mode-title" style="margin-bottom:20px">
+                            <h3 id="manual-mode-title">Modo estritamente manual</h3>
+                            <p>Neste modo, o robô responde somente quando a mensagem inteira corresponder a uma palavra ou expressão de uma regra cadastrada.</p>
+                            <label class="permission-toggle">
+                                <input type="checkbox" name="modo_manual" value="sim" {% if config.get('modo_manual', 'nao') == 'sim' %}checked{% endif %}>
+                                Desativar respostas de IA
+                            </label>
+                            {% if limite_ia is not none %}
+                            <p role="status">Plano Start: {{ consumo_ia_mensal }} de {{ limite_ia }} respostas de IA usadas neste mês. Ao atingir o limite, as regras manuais continuam funcionando.</p>
+                            {% endif %}
+                            {% if not ia_habilitada and config.get('modo_manual', 'nao') != 'sim' %}
+                            <p role="status">A quota mensal de IA foi atingida. O atendimento continua apenas quando a mensagem inteira corresponder a uma regra manual.</p>
+                            {% endif %}
                         </section>
 
                         <div id="regras-container" class="rules-list">
@@ -364,6 +383,7 @@
                             <textarea id="msg-padrao" name="msg_padrao" style="min-height:150px" placeholder="Ex.: Você é a Carol, atendente da loja. Seja simpática, use frases curtas e não invente preços ou disponibilidade.">{{ config.msg_padrao }}</textarea>
                         </section>
 
+                        {% if tem_base_conhecimento %}
                         <section class="ai-card" aria-labelledby="knowledge-title" style="margin-top:20px;background:linear-gradient(145deg,#faf5ff,#fff);border-color:#d8b4fe">
                             <h3 id="knowledge-title" style="color:#7e22ce">📚 Base de Conhecimento da Loja</h3>
                             <p>Informe dados reais para a IA responder sobre preços, horários, entregas e catálogo. Mantenha estas informações atualizadas.</p>
@@ -375,6 +395,12 @@
 - Horário: 8h às 18h
 - Entrega grátis no centro.">{{ config.dados_extras|default('', true) }}</textarea>
                         </section>
+                        {% else %}
+                        <section class="ai-card" aria-labelledby="knowledge-title" style="margin-top:20px">
+                            <h3 id="knowledge-title">Base de Conhecimento da Loja</h3>
+                            <p>A Base de Conhecimento é um recurso dos planos Pro e Enterprise. No Start, configure respostas fixas nas regras manuais.</p>
+                        </section>
+                        {% endif %}
 
                         <section class="ai-card" aria-labelledby="ice-breakers-title" style="margin-top:20px;background:linear-gradient(145deg,#f0f7ff,#fff);border-color:#cce5ff">
                             <h3 id="ice-breakers-title" style="color:#0056b3">❄️ Botões de Início Rápido (Boas-vindas)</h3>
@@ -397,6 +423,12 @@
                             <textarea id="comentario-publico" name="msg_comentario_publico" style="min-height:68px">{{ config.msg_comentario_publico }}</textarea>
                         </section>
 
+                        <section class="comment-card" aria-labelledby="story-mention-title" style="margin-top:20px">
+                            <h3 id="story-mention-title">Agradecimento por menção em Story</h3>
+                            <label class="field-label" for="msg-mencao-story">Mensagem enviada quando alguém mencionar a loja</label>
+                            <textarea id="msg-mencao-story" name="msg_mencao_story" style="min-height:68px">{{ config.get('msg_mencao_story', 'Obrigado por marcar nossa loja nos seus Stories!') }}</textarea>
+                        </section>
+
                         <div class="form-actions">
                             <button class="button button-primary" type="submit">Salvar configurações</button>
                         </div>
@@ -405,12 +437,12 @@
             </section>
 
             <aside class="sidebar" aria-label="Ajuda e resumo">
-                {% if config.pausados %}
+                {% if conversas_pausadas %}
                 <section class="side-card" aria-labelledby="paused-conversations-title">
                     <h3 id="paused-conversations-title">Atendimentos assumidos pela equipe</h3>
-                    <p>O robô está pausado nestas conversas. Retome a automação quando o atendimento humano terminar.</p>
+                    <p>O robô está pausado nestas conversas porque os clientes pediram atendimento humano. Retome a automação quando a equipe terminar.</p>
                     <ul class="mini-list">
-                        {% for sender_id in config.pausados %}
+                        {% for sender_id in conversas_pausadas %}
                         <li style="align-items:center;justify-content:space-between;flex-wrap:wrap">
                             <code>{{ sender_id }}</code>
                             <form method="POST" action="/dashboard/retomar-atendimento">

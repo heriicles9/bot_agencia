@@ -69,12 +69,18 @@ ASAAS_WEBHOOK_TOKEN = os.getenv("ASAAS_WEBHOOK_TOKEN", "")
 DEFAULT_CONFIG = {
     "msg_padrao": "Você é um assistente virtual útil. Responda de forma curta.",
     "msg_comentario_publico": "Oi {nome}! Te chamei no direct.",
+    "msg_mencao_story": "Obrigado por marcar nossa loja nos seus Stories! 💜",
     "link_catalogo": "",
     "dados_extras": "",
     "resp_direct": "sim",
     "resp_comentarios": "sim",
+    "resp_mencoes": "sim",
+    "modo_manual": "nao",
     "fluxos": [{"gatilhos": "preço", "resposta": "R$ 99,00"}],
 }
+
+LIMITE_IA_MENSAL_START = 500
+PLANOS = ("start", "pro", "enterprise")
 
 MODELOS_POR_SEGMENTO = {
     "loja": {
@@ -175,6 +181,53 @@ def verificar_assinatura(cliente):
     if not cliente.ativo: return False
     if cliente.data_expiracao and datetime.now() > cliente.data_expiracao: return False
     return True
+
+
+def plano_cliente(cliente):
+    plano = (cliente.plano or "").strip().casefold()
+    if plano in PLANOS:
+        return plano
+    return "pro"
+
+
+def cliente_tem_base_conhecimento(cliente):
+    return plano_cliente(cliente) in ("pro", "enterprise")
+
+
+def consumo_ia_mensal(config, agora=None):
+    agora = agora or datetime.now()
+    if config.get("mes_consumo_ia") != agora.strftime("%Y-%m"):
+        return 0
+    consumo = config.get("consumo_ia_mensal", 0)
+    if isinstance(consumo, bool) or not isinstance(consumo, int) or consumo < 0:
+        app.logger.warning("Contador mensal de IA inválido; tratando a quota Start como esgotada.")
+        return LIMITE_IA_MENSAL_START
+    return consumo
+
+
+def limite_ia_cliente(cliente):
+    return LIMITE_IA_MENSAL_START if plano_cliente(cliente) == "start" else None
+
+
+def ia_disponivel(cliente, config=None):
+    config = config if isinstance(config, dict) else (
+        cliente.config_json if isinstance(cliente.config_json, dict) else {}
+    )
+    if config.get("modo_manual", "nao") == "sim":
+        return False
+    limite = limite_ia_cliente(cliente)
+    return limite is None or consumo_ia_mensal(config) < limite
+
+
+def normalizar_texto(texto):
+    sem_acentos = "".join(
+        caractere
+        for caractere in unicodedata.normalize("NFD", texto.casefold())
+        if not unicodedata.combining(caractere)
+    )
+    return " ".join(
+        "".join(caractere if caractere.isalnum() else " " for caractere in sem_acentos).split()
+    )
 
 
 def aplicar_modelo_segmento(configuracao, segmento):
@@ -280,7 +333,7 @@ def callback():
             validade_teste = datetime.now() + timedelta(days=7)
             config_padrao = copy.deepcopy(DEFAULT_CONFIG)
             config_padrao["segmento"] = None
-            novo_cliente = Cliente(insta_data['id'], pagina['name'], pagina['access_token'], "teste_gratis", config_padrao, validade_teste)
+            novo_cliente = Cliente(insta_data['id'], pagina['name'], pagina['access_token'], "start", config_padrao, validade_teste)
             db.session.add(novo_cliente)
             db.session.commit()
 
@@ -327,9 +380,10 @@ def dashboard():
     config_cliente = cliente.config_json if isinstance(cliente.config_json, dict) else {}
     if config_cliente.get("segmento") not in MODELOS_POR_SEGMENTO:
         return redirect("/onboarding")
+    config_cliente = dict(config_cliente)
     if not isinstance(config_cliente.get("pausados"), list):
-        config_cliente = dict(config_cliente)
         config_cliente["pausados"] = []
+    conversas_pausadas = config_cliente["pausados"]
 
     agora = datetime.now()
     dias_restantes = (
@@ -349,10 +403,18 @@ def dashboard():
             config_atual = dict(config_cliente)
             config_atual['msg_padrao'] = request.form.get('msg_padrao')
             config_atual['msg_comentario_publico'] = request.form.get('msg_comentario_publico')
-            config_atual['link_catalogo'] = request.form.get('link_catalogo', '').strip()
-            config_atual['dados_extras'] = request.form.get('dados_extras', '').strip()
             config_atual['resp_direct'] = request.form.get('resp_direct', 'nao')
             config_atual['resp_comentarios'] = request.form.get('resp_comentarios', 'nao')
+            config_atual['resp_mencoes'] = request.form.get('resp_mencoes', 'nao')
+            config_atual['msg_mencao_story'] = request.form.get(
+                'msg_mencao_story',
+                DEFAULT_CONFIG['msg_mencao_story'],
+            ).strip() or DEFAULT_CONFIG['msg_mencao_story']
+            config_atual['modo_manual'] = request.form.get('modo_manual', 'nao')
+
+            if cliente_tem_base_conhecimento(cliente):
+                config_atual['link_catalogo'] = request.form.get('link_catalogo', '').strip()
+                config_atual['dados_extras'] = request.form.get('dados_extras', '').strip()
 
             novos_fluxos = []
             for i in range(len(gatilhos_list)):
@@ -404,7 +466,12 @@ def dashboard():
                            acesso_bloqueado=acesso_bloqueado,
                            pausada=not cliente.ativo,
                            validade=data_formatada,
-                           dias_restantes=dias_restantes)
+                           dias_restantes=dias_restantes,
+                           conversas_pausadas=conversas_pausadas,
+                           tem_base_conhecimento=cliente_tem_base_conhecimento(cliente),
+                           limite_ia=limite_ia_cliente(cliente),
+                           consumo_ia_mensal=consumo_ia_mensal(config_cliente),
+                           ia_habilitada=ia_disponivel(cliente, config_cliente))
 
 @app.route("/dashboard/retomar-atendimento", methods=["POST"])
 def retomar_atendimento():
@@ -472,7 +539,21 @@ def privacidade():
 def admin_panel():
     if not session.get('admin_logged_in'): return render_template("admin_login.html")
     todos_clientes = Cliente.query.all()
-    return render_template("admin_dashboard.html", clientes=todos_clientes, hoje=datetime.now())
+    planos_clientes = {cliente.id: plano_cliente(cliente) for cliente in todos_clientes}
+    consumos_mensais = {
+        cliente.id: consumo_ia_mensal(
+            cliente.config_json if isinstance(cliente.config_json, dict) else {}
+        )
+        for cliente in todos_clientes
+    }
+    return render_template(
+        "admin_dashboard.html",
+        clientes=todos_clientes,
+        hoje=datetime.now(),
+        planos_clientes=planos_clientes,
+        consumos_mensais=consumos_mensais,
+        limite_ia_start=LIMITE_IA_MENSAL_START,
+    )
 
 @app.route(f"{ADMIN_BASE_PATH}/logout")
 def admin_logout():
@@ -496,8 +577,27 @@ def admin_renovar(id):
     if cliente:
         cliente.data_expiracao = datetime.now() + timedelta(days=30)
         cliente.ativo = True
-        cliente.plano = "renovado_manual"
+        cliente.plano = "pro"
         db.session.commit()
+    return redirect(url_for("admin_panel"))
+
+@app.route(f"{ADMIN_BASE_PATH}/plano/<id>", methods=["POST"])
+def admin_definir_plano(id):
+    if not session.get('admin_logged_in'):
+        return redirect(url_for("admin_panel"))
+    plano = request.form.get("plano", "").strip().casefold()
+    if plano not in PLANOS:
+        return "Plano inválido.", 400
+    cliente = db.session.get(Cliente, id)
+    if not cliente:
+        return "Cliente não encontrado.", 404
+    cliente.plano = plano
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Falha ao alterar plano do cliente %s.", cliente.id)
+        return "Não foi possível alterar o plano.", 500
     return redirect(url_for("admin_panel"))
 
 @app.route(f"{ADMIN_BASE_PATH}/toggle_status/<id>")
@@ -601,6 +701,7 @@ def webhook_asaas():
                 cliente.data_expiracao = inicio_periodo + timedelta(days=30)
                 registro_pagamento.periodo_concedido = True
             registro_pagamento.status = "PAID"
+            cliente.plano = "pro"
             cliente.ativo = True
         elif registro_pagamento.status != "PAID":
             registro_pagamento.status = "OVERDUE"
@@ -669,33 +770,82 @@ def consultar_gemini(config_cliente, pergunta_cliente):
 def encontrar_resposta(texto, cliente):
     config = cliente.config_json if isinstance(cliente.config_json, dict) else {}
     fluxos = config.get('fluxos', [])
+    manual_apenas = (
+        config.get("modo_manual", "nao") == "sim"
+        or not ia_disponivel(cliente, config)
+    )
+    texto_comparacao = normalizar_texto(texto) if manual_apenas else texto
 
     for regra in fluxos:
         gatilhos = [p.strip().lower() for p in regra['gatilhos'].split(',')]
-        if any(p in texto for p in gatilhos):
-            return regra['resposta'], False
+        for gatilho in gatilhos:
+            if manual_apenas:
+                corresponde = bool(gatilho) and normalizar_texto(gatilho) == texto_comparacao
+            else:
+                corresponde = bool(gatilho) and gatilho in texto_comparacao
+            if corresponde:
+                return regra['resposta'], False
+
+    if manual_apenas:
+        return None, False
 
     persona = config.get('msg_padrao')
     if persona and len(persona) > 5:
-        resposta_ia = consultar_gemini(config, texto)
+        config_ia = dict(config)
+        if not cliente_tem_base_conhecimento(cliente):
+            config_ia["link_catalogo"] = ""
+            config_ia["dados_extras"] = ""
+        resposta_ia = consultar_gemini(config_ia, texto)
         if resposta_ia:
             return resposta_ia, True
 
     return None, False
 
 def registrar_consumo_ia(cliente):
-    config = dict(cliente.config_json) if isinstance(cliente.config_json, dict) else {}
     try:
+        cliente_bloqueado = (
+            Cliente.query
+            .filter_by(id=cliente.id)
+            .with_for_update()
+            .populate_existing()
+            .one_or_none()
+        )
+        if not cliente_bloqueado:
+            app.logger.error("Cliente %s não encontrado ao registrar consumo da API Gemini.", cliente.id)
+            db.session.rollback()
+            return False
+
+        config = (
+            dict(cliente_bloqueado.config_json)
+            if isinstance(cliente_bloqueado.config_json, dict)
+            else {}
+        )
         consumo_atual = config.get('consumo_ia', 0)
         if isinstance(consumo_atual, bool) or not isinstance(consumo_atual, int) or consumo_atual < 0:
             raise ValueError("O contador consumo_ia precisa ser um inteiro não negativo.")
 
+        agora = datetime.now()
+        mes_atual = agora.strftime("%Y-%m")
+        if config.get("mes_consumo_ia") != mes_atual:
+            config["mes_consumo_ia"] = mes_atual
+            config["consumo_ia_mensal"] = 0
+        consumo_mensal = config.get("consumo_ia_mensal", 0)
+        if isinstance(consumo_mensal, bool) or not isinstance(consumo_mensal, int) or consumo_mensal < 0:
+            raise ValueError("O contador mensal consumo_ia_mensal precisa ser um inteiro não negativo.")
+        limite = limite_ia_cliente(cliente_bloqueado)
+        if limite is not None and consumo_mensal >= limite:
+            db.session.rollback()
+            return False
+
         config['consumo_ia'] = consumo_atual + 1
-        cliente.config_json = config
+        config["consumo_ia_mensal"] = consumo_mensal + 1
+        cliente_bloqueado.config_json = config
         db.session.commit()
+        return True
     except Exception:
         db.session.rollback()
         app.logger.exception("Falha ao registrar consumo da API Gemini (cliente %s).", cliente.id)
+        return False
 
 def processar_mensagem(event, cliente):
     config = (
@@ -703,17 +853,20 @@ def processar_mensagem(event, cliente):
         if isinstance(cliente.config_json, dict)
         else {}
     )
+    sender_id = event.get('sender', {}).get('id')
+    mensagem = event.get('message') or {}
+    if mensagem.get('is_echo'):
+        return
+
     if config.get('resp_direct', 'sim') == 'nao':
         return
 
-    sender_id = event.get('sender', {}).get('id')
-    mensagem = event.get('message') or {}
     postback = event.get('postback') or {}
     texto = (mensagem.get('text') or postback.get('payload') or postback.get('title') or '').lower()
     evento_id = mensagem.get('mid') or event.get('timestamp')
     msg_id = f"{sender_id}:{evento_id}" if sender_id and evento_id is not None else None
 
-    if not sender_id or sender_id == cliente.id or mensagem.get('is_echo') or not texto:
+    if not sender_id or sender_id == cliente.id or not texto:
         return
     if msg_id is not None and msg_id in mensagens_processadas:
         return
@@ -726,11 +879,7 @@ def processar_mensagem(event, cliente):
     if sender_id in pausados:
         return
 
-    texto_normalizado = ''.join(
-        caractere
-        for caractere in unicodedata.normalize('NFD', texto.casefold())
-        if not unicodedata.combining(caractere)
-    )
+    texto_normalizado = normalizar_texto(texto)
     gatilhos_humano = (
         "atendente",
         "humano",
@@ -764,11 +913,49 @@ def processar_mensagem(event, cliente):
     resposta, usou_ia = encontrar_resposta(texto, cliente)
 
     if resposta:
+        if usou_ia and not registrar_consumo_ia(cliente):
+            return
         enviar_texto(sender_id, resposta, cliente.token)
         if msg_id is not None:
             mensagens_processadas.add(msg_id)
-        if usou_ia:
-            registrar_consumo_ia(cliente)
+
+def processar_mencao_story(event, cliente):
+    config = cliente.config_json if isinstance(cliente.config_json, dict) else {}
+    if config.get("resp_mencoes", "sim") == "nao" or config.get("modo_manual") == "sim":
+        return
+    if not evento_mencao_story(event):
+        return
+    sender_id = event.get("sender", {}).get("id")
+    if not sender_id or sender_id == cliente.id:
+        return
+    texto = config.get("msg_mencao_story", DEFAULT_CONFIG["msg_mencao_story"])
+    enviar_texto(sender_id, texto, cliente.token)
+
+def evento_mencao_story(event):
+    attachments = (event.get("message") or {}).get("attachments") or []
+    return any(attachment.get("type") == "story_mention" for attachment in attachments)
+
+def processar_mencao_story_meta(mencao, cliente):
+    config = cliente.config_json if isinstance(cliente.config_json, dict) else {}
+    if config.get("resp_mencoes", "sim") == "nao" or config.get("modo_manual") == "sim":
+        return
+
+    sender_id = (
+        mencao.get("sender_id")
+        or mencao.get("user_id")
+        or (mencao.get("from") or {}).get("id")
+    )
+    texto = config.get("msg_mencao_story", DEFAULT_CONFIG["msg_mencao_story"])
+    comment_id = mencao.get("comment_id")
+    if comment_id:
+        enviar_private_reply(comment_id, texto, cliente.token)
+    elif sender_id and sender_id != cliente.id:
+        enviar_texto(sender_id, texto, cliente.token)
+    else:
+        app.logger.warning(
+            "Evento de menção sem destinatário reconhecido para cliente %s.",
+            cliente.id,
+        )
 
 def processar_comentario(comentario, cliente):
     config = (
@@ -788,11 +975,11 @@ def processar_comentario(comentario, cliente):
 
     resposta_privada, usou_ia = encontrar_resposta(texto, cliente)
     if resposta_privada:
+        if usou_ia and not registrar_consumo_ia(cliente):
+            return
         mascara = config.get('msg_comentario_publico', "Olá {nome}! Direct!")
         enviar_resposta_publica(comment_id, mascara.replace("{nome}", f"@{username}"), cliente.token)
         enviar_private_reply(comment_id, resposta_privada, cliente.token)
-        if usou_ia:
-            registrar_consumo_ia(cliente)
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -837,12 +1024,17 @@ def webhook():
 
                 if 'messaging' in entry:
                     for msg in entry['messaging']:
-                        processar_mensagem(msg, cliente)
+                        if evento_mencao_story(msg):
+                            processar_mencao_story(msg, cliente)
+                        else:
+                            processar_mensagem(msg, cliente)
 
                 if 'changes' in entry:
                     for change in entry['changes']:
                         if change.get('field') == 'comments':
                             processar_comentario(change['value'], cliente)
+                        elif change.get('field') == 'mentions':
+                            processar_mencao_story_meta(change.get('value') or {}, cliente)
         return 'Recebido', 200
 
 # --- FUNÇÕES DE ENVIO ---

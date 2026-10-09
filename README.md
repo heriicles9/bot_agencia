@@ -13,7 +13,10 @@ Este documento reúne instruções para quem administra e publica o serviço e p
 - Respostas de fallback pelo Google Gemini, orientadas pela personalidade e pela base de conhecimento cadastradas pelo lojista.
 - Até quatro botões Ice Breaker para iniciar conversas no Direct.
 - Resposta pública a comentários e envio de mensagem privada quando o comentário encontra uma regra ou resposta da IA.
-- Pausa das respostas automáticas para uma conversa quando alguém pede atendimento humano, com opção de retomar pelo painel.
+- Agradecimento configurável a menções da loja em Stories.
+- Modo estritamente manual, com respostas somente pelas regras, quando escolhido ou quando a quota mensal de IA do plano Start se esgota.
+- Pausa das respostas automáticas por conversa quando o cliente pede atendimento humano, com opção de retomar pelo painel.
+- Planos Start, Pro e Enterprise: Start inclui 500 respostas de IA por mês e não inclui Base de Conhecimento; Pro e Enterprise incluem a Base de Conhecimento e não têm limite mensal de respostas de IA.
 - Painel administrativo para acompanhar clientes, validade, status e contagem de respostas da IA.
 
 ## Configuração e publicação (responsável técnico)
@@ -37,7 +40,7 @@ Configure os valores abaixo no ambiente do serviço de hospedagem. Não coloque 
 
 O endereço de callback está definido no código como `https://bot-instagram-bcjd.onrender.com/callback`. O domínio publicado e o URI de redirecionamento cadastrado no Meta App Dashboard devem corresponder; se a aplicação mudar de domínio, atualize também `REDIRECT_URI` em `app.py` e a configuração na Meta.
 
-O OAuth solicita as permissões `pages_show_list`, `instagram_basic`, `instagram_manage_comments`, `instagram_manage_messages`, `pages_messaging`, `pages_read_engagement` e `pages_manage_metadata`. A conexão depende de uma página Facebook com uma conta profissional do Instagram vinculada, das permissões liberadas para o aplicativo e das aprovações/modos de acesso configurados na Meta.
+O OAuth solicita as permissões `pages_show_list`, `instagram_basic`, `instagram_manage_comments`, `instagram_manage_messages`, `pages_messaging`, `pages_read_engagement` e `pages_manage_metadata`. A inscrição do webhook inclui `mentions`, `messages`, `comments` e `messaging_postbacks`. A conexão depende de uma página Facebook com uma conta profissional do Instagram vinculada, das permissões liberadas para o aplicativo e das aprovações/modos de acesso configurados na Meta.
 
 O webhook Meta é `GET/POST /webhook`. Configure `FACEBOOK_VERIFY_TOKEN` para a verificação e `FACEBOOK_APP_SECRET` para que as requisições POST sejam aceitas com assinatura válida.
 
@@ -86,9 +89,13 @@ Novas contas recebem um teste inicial de 7 dias. O funcionamento também depende
 
 **Botões de início rápido:** configure até quatro perguntas para iniciar conversas no Direct. Crie regras de resposta correspondentes a essas perguntas para dar respostas determinísticas. A integração usa `instagram_manage_messages`; contas já conectadas podem precisar sair e entrar novamente após uma nova permissão ser adicionada. Os botões Ice Breaker não são exibidos no Instagram para desktop; valide pelo aplicativo móvel.
 
-**Comentários e atendimento humano:** quando um comentário encontra uma regra ou resposta da IA, o sistema publica a mensagem configurada (use `{nome}` para mencionar o usuário) e envia uma resposta privada. Se alguém pedir para falar com um atendente — por exemplo, usando “atendente”, “humano”, “suporte” ou “falar com alguém” — a automação pausa para aquela conversa. A equipe continua o atendimento no Instagram e pode retomar a automação no painel.
+**Menções em Stories:** com a opção de agradecimento ligada, o robô envia a mensagem configurada quando o webhook Meta entrega um evento de menção de Story compatível. O recebimento depende da inscrição e das permissões de webhook da Meta.
+
+**Comentários e atendimento humano:** quando um comentário encontra uma regra ou resposta da IA, o sistema publica a mensagem configurada (use `{nome}` para mencionar o usuário) e envia uma resposta privada. Se alguém pedir para falar com um atendente — por exemplo, usando “atendente”, “humano”, “suporte” ou “falar com alguém” — a automação pausa para aquela conversa até que a equipe a retome no painel. A detecção automática de respostas manuais enviadas pelo lojista não está disponível; a Meta não fornece aqui um evento confiável para acionar essa pausa.
 
 **Permissões de resposta:** no topo das configurações, desative separadamente as respostas no Direct ou nos comentários. Cada opção desligada faz o webhook ignorar aquele tipo de evento; contas existentes sem essas opções salvas continuam com ambos os módulos ligados.
+
+**Modo manual e planos:** o modo estritamente manual pode ser ligado no painel e faz o robô usar somente as regras cadastradas quando a mensagem inteira corresponde a uma palavra ou expressão de gatilho (ignorando maiúsculas, acentos e pontuação ao comparar). Todo teste novo começa no plano Start: até 500 respostas Gemini aceites por mês-calendário e sem acesso à Base de Conhecimento. Ao atingir a quota, apenas regras com correspondência da mensagem inteira continuam ativas até o início do próximo mês. Clientes legados e renovações administrativas existentes permanecem no Pro; eventos de pagamento Asaas confirmados também atribuem Pro. O administrador pode definir Start, Pro ou Enterprise individualmente no painel admin. Pro e Enterprise não têm quota mensal de IA e podem usar a Base de Conhecimento. A Base de Conhecimento de clientes Start é preservada, mas não é enviada ao Gemini nem pode ser editada até a mudança para Pro ou Enterprise.
 
 O painel só permite salvar configurações quando a conta está ativa e dentro da validade. Se o acesso estiver suspenso ou vencido, fale com a equipe responsável.
 
@@ -106,12 +113,14 @@ O caminho menos óbvio é apenas uma camada adicional de discrição: **não sub
 - **Robôs Ativos:** número de clientes cujo indicador de atividade está ligado; verifique também validade e rótulo de status.
 - **Consumo API (Gemini):** soma dos contadores armazenados em `config_json`.
 - **Uso IA:** contador individual acumulado mostrado para cada cliente.
+- **Quota mensal:** o Start mostra também o total de respostas Gemini do mês atual, com limite de 500.
+- **Plano:** o seletor na tabela atribui Start, Pro ou Enterprise e define o limite de IA e o acesso à Base de Conhecimento.
 - **Validade e Status:** ajudam a identificar contas ativas, vencidas ou bloqueadas.
 - **+30 Dias:** renova manualmente a validade por 30 dias e reativa a conta.
 - **Bloquear/Desbloquear:** alterna o indicador de atividade da conta.
 - **Excluir:** remove permanentemente o registro do cliente; confirme a identidade antes de usar.
 
-O contador aumenta uma vez quando o Gemini retorna uma resposta não vazia que o fluxo aceita para envio, inclusive em respostas privadas a comentários. Regras manuais não aumentam o contador. Se o Gemini falhar sem gerar resposta, não há incremento. O contador é cumulativo: **não representa um mês, não reinicia automaticamente e não é um extrato de faturamento da Google**. Ele conta respostas da aplicação, não tokens, tentativas de fallback ou cobranças monetárias.
+O contador acumulado aumenta uma vez quando o Gemini retorna uma resposta não vazia que o fluxo aceita para envio, inclusive em respostas privadas a comentários. Regras manuais não aumentam os contadores. Se o Gemini falhar sem gerar resposta, não há incremento. O uso mensal do Start é separado e reinicia por mês-calendário; o contador acumulado permanece disponível no admin e **não é um extrato de faturamento da Google**. Ele conta respostas aceites pela aplicação, não tokens ou cobranças monetárias.
 
 ### Proteção e cuidados operacionais
 
