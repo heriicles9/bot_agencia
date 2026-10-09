@@ -88,6 +88,8 @@ Novas contas recebem um teste inicial de 7 dias. O funcionamento também depende
 
 **Comentários e atendimento humano:** quando um comentário encontra uma regra ou resposta da IA, o sistema publica a mensagem configurada (use `{nome}` para mencionar o usuário) e envia uma resposta privada. Se alguém pedir para falar com um atendente — por exemplo, usando “atendente”, “humano”, “suporte” ou “falar com alguém” — a automação pausa para aquela conversa. A equipe continua o atendimento no Instagram e pode retomar a automação no painel.
 
+**Permissões de resposta:** no topo das configurações, desative separadamente as respostas no Direct ou nos comentários. Cada opção desligada faz o webhook ignorar aquele tipo de evento; contas existentes sem essas opções salvas continuam com ambos os módulos ligados.
+
 O painel só permite salvar configurações quando a conta está ativa e dentro da validade. Se o acesso estiver suspenso ou vencido, fale com a equipe responsável.
 
 ## Instruções para você (administrador)

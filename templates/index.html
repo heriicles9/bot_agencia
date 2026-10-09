@@ -5,30 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f7f8fc">
     <title>IGent | Atendimento inteligente no Instagram</title>
-    <!-- Biblioteca de Animações de Scroll -->
+
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
     <style>
         :root { --ink: #172033; --muted: #69758b; --brand: #5b57e7; --line: #e7ebf2; }
         * { box-sizing: border-box; }
-        body {
+
+        html, body {
             margin: 0;
-            background: #f7f8fc;
+            padding: 0;
+            background-color: #f7f8fc;
             color: var(--ink);
             font: 15px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
         }
-        .page { width: min(1080px, calc(100% - 40px)); margin: 0 auto; }
+
+        #webgl-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .page { width: min(1080px, calc(100% - 40px)); margin: 0 auto; position: relative; z-index: 10; }
+
         header { display: flex; align-items: center; justify-content: space-between; min-height: 82px; }
         .header-main { display: flex; align-items: center; gap: 30px; }
         .header-nav { display: flex; gap: 20px; color: var(--muted); font-size: 14px; font-weight: 600; }
         .header-nav a { color: inherit; text-decoration: none; }
         .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; }
         .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -.04em; }
+
         .button {
             display: inline-flex; min-height: 44px; align-items: center; justify-content: center;
             padding: 0 17px; border-radius: 11px; background: var(--brand); color: white;
             font-weight: 750; text-decoration: none; box-shadow: 0 8px 18px rgba(91, 87, 231, .2);
+            transition: all 0.2s ease;
         }
-        .button:hover { background: #4642c8; }
+        .button:hover { background: #4642c8; transform: translateY(-2px); }
+
         .hero {
             display: grid; grid-template-columns: 1.08fr .92fr; align-items: center; gap: 46px;
             min-height: 550px; padding: 42px 0 65px;
@@ -38,41 +58,50 @@
         .lead { max-width: 560px; margin: 0 0 25px; color: var(--muted); font-size: 17px; }
         .hero-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
         .trial { color: var(--muted); font-size: 12px; }
+
         .preview-wrap { position: relative; padding: 20px; }
         .glow {
             position: absolute; inset: 6% 2%; border-radius: 35%; background: #e9e8ff;
-            filter: blur(35px); transform: rotate(-10deg);
+            filter: blur(35px); transform: rotate(-10deg); opacity: 0.6;
         }
+
         .preview {
-            position: relative; padding: 24px; border: 1px solid var(--line); border-radius: 23px;
-            background: white; box-shadow: 0 25px 70px rgba(35, 47, 79, .12);
+            position: relative; padding: 24px; border: 1px solid rgba(255, 255, 255, 0.9); border-radius: 23px;
+            background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 25px 70px rgba(35, 47, 79, .08);
         }
+
         .preview-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
         .preview-title { font-weight: 800; }
         .active { padding: 5px 9px; border-radius: 999px; background: #eaf8f1; color: #14845c; font-size: 11px; font-weight: 800; }
         .preview-label { margin-bottom: 9px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
         .rule {
             margin-bottom: 10px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px;
-            background: #fcfdff; font-size: 13px;
+            background: rgba(252, 253, 255, 0.85); font-size: 13px;
         }
         .rule strong { display: block; margin-bottom: 3px; }
         .ai {
             margin-top: 15px; padding: 15px; border: 1px solid #e1e0ff; border-radius: 13px;
-            background: #f7f6ff; font-size: 12px;
+            background: rgba(247, 246, 255, 0.85); font-size: 12px;
         }
         .ai strong { display: block; margin-bottom: 4px; }
-        .features {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; padding-bottom: 62px;
+
+        .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; padding-bottom: 62px; }
+        .feature {
+            padding: 19px; border: 1px solid rgba(231, 235, 242, 0.5); border-radius: 15px;
+            background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
         }
-        .feature { padding: 19px; border: 1px solid var(--line); border-radius: 15px; background: white; }
         .feature strong { display: block; margin-bottom: 5px; font-size: 14px; }
         .feature span { color: var(--muted); font-size: 12px; }
+
         .pricing, .faq { padding: 60px 0; }
         .pricing { text-align: center; }
         .pricing h2, .faq h2 { margin: 0 0 36px; font-size: 32px; letter-spacing: -.04em; }
+
         .pricing-card {
             max-width: 400px; margin: 0 auto; padding: 36px; border: 2px solid var(--brand);
-            border-radius: 20px; background: white; box-shadow: 0 20px 40px rgba(91, 87, 231, .1);
+            border-radius: 20px; background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 20px 40px rgba(91, 87, 231, .1);
         }
         .pricing-card h3 { margin: 0 0 10px; font-size: 24px; }
         .pricing-description, .pricing-note, .faq-answer { color: var(--muted); }
@@ -83,12 +112,26 @@
         .pricing-list strong { color: var(--ink); }
         .pricing-card .button { width: 100%; }
         .pricing-note { margin: 14px 0 0; font-size: 12px; }
-        .faq { max-width: 700px; margin: 0 auto; padding-bottom: 80px; }
+
+        .faq { max-width: 700px; margin: 0 auto; padding-bottom: 200px; }
         .faq h2 { text-align: center; }
-        .faq-item { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+
+        .faq-item {
+            margin-bottom: 24px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(35, 47, 79, .06);
+            position: relative;
+            z-index: 2;
+        }
         .faq-item:last-child { margin-bottom: 0; }
-        .faq-question { display: block; margin-bottom: 10px; font-size: 18px; }
-        .faq-answer { margin: 0; }
+        .faq-question { display: block; margin-bottom: 10px; font-size: 18px; color: var(--ink); font-weight: 800; }
+        .faq-answer { margin: 0; color: #4a5568; font-weight: 500; }
+
         .whatsapp-float {
             position: fixed; right: 25px; bottom: 25px; z-index: 1000; display: flex;
             width: 60px; height: 60px; align-items: center; justify-content: center;
@@ -97,10 +140,9 @@
             transition: transform .2s;
         }
         .whatsapp-float:hover { transform: scale(1.1); }
-        .whatsapp-float:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
         .whatsapp-float svg { width: 30px; height: 30px; }
         footer { padding: 19px 0 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
-        html { scroll-behavior: smooth; }
+
         @media (max-width: 760px) {
             .hero { grid-template-columns: 1fr; gap: 23px; min-height: auto; padding: 44px 0 45px; }
             .preview-wrap { max-width: 560px; width: 100%; margin: 0 auto; }
@@ -118,11 +160,23 @@
             .preview { padding: 17px; }
             .pricing-card { padding: 28px 22px; }
             .pricing-amount { font-size: 42px; }
-            .whatsapp-float { right: 18px; bottom: 18px; width: 56px; height: 56px; }
+            .faq-item { padding: 20px; }
+        }
+        .whatsapp-float:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+        /* FALLBACK DE SEGURANÇA: Para navegadores antigos que não suportam o efeito de vidro */
+        @supports not (backdrop-filter: blur(12px)) {
+            .faq-item, .preview, .feature, .pricing-card {
+                background: rgba(255, 255, 255, 0.98);
+            }
         }
     </style>
 </head>
 <body>
+
+    <!-- ACESSIBILIDADE: Esconde o Canvas dos leitores de ecrã para evitar conflitos -->
+    <canvas id="webgl-canvas" aria-hidden="true" role="presentation"></canvas>
+
     <div class="page">
         <header>
             <div class="header-main">
@@ -146,7 +200,7 @@
             <section class="hero">
                 <div data-aos="fade-up">
                     <p class="eyebrow">Atendimento para lojas e supermercados</p>
-                    <h1>Seu Instagram atendido com o jeito da sua marca.</h1>
+                    <h1>A Inteligência Artificial que atende com a voz da sua marca.</h1>
                     <p class="lead">Configure respostas automáticas para mensagens e comentários, escolha um modelo para o seu negócio e personalize cada detalhe.</p>
                     <div class="hero-actions">
                         {% if conectado %}
@@ -180,7 +234,7 @@
             <section id="planos" class="pricing" aria-labelledby="pricing-title">
                 <p class="eyebrow">Simples e Transparente</p>
                 <h2 id="pricing-title">Plano Único para o seu negócio</h2>
-                <div class="pricing-card">
+                <div class="pricing-card" data-aos="zoom-in">
                     <h3>Plano Pro</h3>
                     <p class="pricing-description">Tudo que você precisa para automatizar seu Instagram.</p>
                     <div class="pricing-amount">R$ 49,90<span class="pricing-period"> /mês</span></div>
@@ -196,16 +250,16 @@
             </section>
 
             <section id="faq" class="faq" aria-labelledby="faq-title">
-                <h2 id="faq-title">Dúvidas Frequentes</h2>
-                <div class="faq-item">
+                <h2 id="faq-title" data-aos="fade-up">Dúvidas Frequentes</h2>
+                <div class="faq-item" data-aos="fade-up">
                     <strong class="faq-question">Preciso saber programar para configurar?</strong>
                     <p class="faq-answer">Não. Você configura as respostas e as orientações da IA pelo painel, sem precisar escrever código.</p>
                 </div>
-                <div class="faq-item">
+                <div class="faq-item" data-aos="fade-up">
                     <strong class="faq-question">Como funciona a conexão com o Instagram?</strong>
                     <p class="faq-answer">A conexão é feita pelo fluxo de autorização da Meta e usa as APIs oficiais disponíveis para a sua conta. A aprovação e o funcionamento também dependem das permissões e políticas da Meta.</p>
                 </div>
-                <div class="faq-item">
+                <div class="faq-item" data-aos="fade-up">
                     <strong class="faq-question">O que acontece se o cliente quiser falar com uma pessoa?</strong>
                     <p class="faq-answer">Quando o cliente pede um atendente, o IGent pausa as respostas automáticas para aquela conversa. A equipe pode continuar pelo Instagram e retomar a automação pelo painel quando terminar.</p>
                 </div>
@@ -220,18 +274,258 @@
             </div>
         </footer>
     </div>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script>
-        AOS.init({
-            duration: 800,
-            once: true,
-            offset: 100
-        });
-    </script>
+
     <a class="whatsapp-float" href="https://wa.me/5575983479259?text=Ol%C3%A1!%20Gostaria%20de%20tirar%20uma%20d%C3%BAvida%20sobre%20o%20IGent%20Pro." target="_blank" rel="noopener noreferrer" aria-label="Fale com a equipe pelo WhatsApp" title="Fale com a equipe pelo WhatsApp">
         <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+            <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.197-.012-.304.086-.402.088-.088.197-.232.296-.346.1-.114.133-.197.197-.33.065-.133.033-.247-.016-.346-.05-.099-.445-1.073-.61-1.469-.16-.385-.323-.333-.445-.339l-.38-.007a.73.73 0 0 0-.527.247c-.182.197-.692.677-.692 1.65s.708 1.914.807 2.047c.099.133 1.394 2.13 3.378 2.986.472.204.84.326 1.128.417.474.15.906.129 1.247.078.38-.057 1.17-.479 1.335-.941.165-.462.165-.858.115-.941-.05-.082-.182-.132-.38-.231z"/>
         </svg>
     </a>
+
+    <!-- BIBLIOTECAS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+
+    <script defer>
+        document.addEventListener("DOMContentLoaded", () => {
+            AOS.init({ duration: 800, once: true, offset: 100 });
+
+            const canvas = document.querySelector('#webgl-canvas');
+            const scene = new THREE.Scene();
+
+            const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 28;
+
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000, 0);
+
+            // PERFORMANCE: Detecta Mobile e reduz a carga matemática para poupar bateria
+            const isMobile = window.innerWidth < 768;
+            const particleCount = isMobile ? 8000 : 20000;
+
+            const geometry = new THREE.BufferGeometry();
+            const positions1 = new Float32Array(particleCount * 3);
+            const positions2 = new Float32Array(particleCount * 3);
+            const randoms = new Float32Array(particleCount);
+            const colors = new Float32Array(particleCount * 3);
+
+            function mixColor(c1, c2, t) {
+                return [
+                    c1[0] + (c2[0] - c1[0]) * t,
+                    c1[1] + (c2[1] - c1[1]) * t,
+                    c1[2] + (c2[2] - c1[2]) * t
+                ];
+            }
+
+            function getLogoPoint() {
+                while(true) {
+                    let x = (Math.random() - 0.5) * 12;
+                    let y = (Math.random() - 0.5) * 12;
+                    let z = (Math.random() - 0.5) * 1.5;
+
+                    let gapCenter = 0.18 * y - 0.25;
+                    let gapWidth = 0.35;
+
+                    if (Math.pow(x - (-2.1), 2) + Math.pow(y - 4.4, 2) < 1.35 * 1.35) {
+                        return { x, y, z, part: 'dot' };
+                    }
+
+                    let isLeftStem = false;
+                    if (x > -3.5 && x < gapCenter - gapWidth) {
+                        if (y > -2.8 && y < 2.5) {
+                            isLeftStem = true;
+                            if (y < -1.5 && x < -2.2 && Math.pow(x - (-2.2), 2) + Math.pow(y - (-1.5), 2) > 1.3 * 1.3) isLeftStem = false;
+                            if (y > 1.2 && x < -2.2 && Math.pow(x - (-2.2), 2) + Math.pow(y - 1.2, 2) > 1.3 * 1.3) isLeftStem = false;
+                        }
+                    }
+                    if (isLeftStem) return { x, y, z, part: 'left' };
+
+                    let isRightBubble = false;
+                    if (x > gapCenter + gapWidth) {
+                        let cx = 1.2; let cy = 0.8; let R = 3.3;
+                        if (Math.pow(x - cx, 2) + Math.pow(y - cy, 2) < R * R) {
+                            isRightBubble = true;
+                        }
+                    }
+
+                    let isTail = false;
+                    if (x > gapCenter + gapWidth && y < -1.0 && y > -4.5 && x < 2.5) {
+                        let p0 = {x: gapCenter + gapWidth, y: -1.0};
+                        let p1 = {x: 2.0, y: -1.5};
+                        let p2 = {x: -0.5, y: -4.5};
+
+                        let area = 0.5 *(-p1.y*p2.x + p0.y*(-p1.x + p2.x) + p0.x*(p1.y - p2.y) + p1.x*p2.y);
+                        let s = 1/(2*area)*(p0.y*p2.x - p0.x*p2.y + (p2.y - p0.y)*x + (p0.x - p2.x)*y);
+                        let t = 1/(2*area)*(p0.x*p1.y - p0.y*p1.x + (p0.y - p1.y)*x + (p1.x - p0.x)*y);
+
+                        if (s >= 0 && t >= 0 && 1-s-t >= 0) {
+                            isTail = true;
+                            if (Math.pow(x - 2.8, 2) + Math.pow(y - (-2.8), 2) < 2.5 * 2.5) {
+                                isTail = false;
+                            }
+                        }
+                    }
+                    if (isRightBubble || isTail) return { x, y, z, part: 'right' };
+                }
+            }
+
+            for(let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+
+                const radius = 60;
+                const u = Math.random(), v = Math.random();
+                const theta = u * 2.0 * Math.PI, phi = Math.acos(2.0 * v - 1.0);
+                const r = Math.cbrt(Math.random()) * radius;
+
+                positions1[i3] = r * Math.sin(phi) * Math.cos(theta);
+                positions1[i3+1] = r * Math.sin(phi) * Math.sin(theta);
+                positions1[i3+2] = r * Math.cos(phi);
+
+                const logoPoint = getLogoPoint();
+                positions2[i3] = logoPoint.x * 1.4 + 1.0;
+                positions2[i3+1] = (logoPoint.y * 1.4) + 2.0;
+                positions2[i3+2] = logoPoint.z * 1.4;
+
+                randoms[i] = Math.random();
+
+                let c;
+                if (logoPoint.part === 'dot') {
+                    let t = Math.max(0, Math.min(1, (logoPoint.y - 3.3) / 2.4));
+                    c = mixColor([1.0, 0.15, 0.35], [1.0, 0.45, 0.1], t);
+                } else if (logoPoint.part === 'left') {
+                    let t = Math.max(0, Math.min(1, (logoPoint.y + 3.5) / 6.0));
+                    c = mixColor([0.25, 0.0, 0.8], [1.0, 0.1, 0.5], t);
+                } else {
+                    let t = Math.max(0, Math.min(1, (logoPoint.y + 4.5) / 7.7));
+                    c = mixColor([0.15, 0.0, 0.6], [0.9, 0.0, 0.55], t);
+                }
+
+                colors[i3] = c[0];
+                colors[i3+1] = c[1];
+                colors[i3+2] = c[2];
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions1, 3));
+            geometry.setAttribute('aTarget', new THREE.BufferAttribute(positions2, 3));
+            geometry.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 1));
+            geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    uTime: { value: 0 },
+                    uProgress: { value: 0 }
+                },
+                vertexShader: `
+                    uniform float uTime;
+                    uniform float uProgress;
+                    attribute vec3 aTarget;
+                    attribute float aRandom;
+                    attribute vec3 aColor;
+
+                    varying vec3 vColor;
+                    varying float vOpacity;
+
+                    void main() {
+                        vColor = aColor;
+
+                        vec3 mixedPos = mix(position, aTarget, uProgress);
+
+                        float vibration = (1.0 - uProgress) * 0.8;
+                        mixedPos.y += sin(uTime * 2.0 + aRandom * 10.0) * vibration;
+                        mixedPos.x += cos(uTime * 1.5 + aRandom * 10.0) * vibration;
+
+                        vec4 mvPosition = modelViewMatrix * vec4(mixedPos, 1.0);
+
+                        gl_PointSize = (2.2 * aRandom + 1.0) * (35.0 / -mvPosition.z);
+                        gl_Position = projectionMatrix * mvPosition;
+
+                        vOpacity = mix(0.12, 0.95, uProgress);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vColor;
+                    varying float vOpacity;
+
+                    void main() {
+                        vec2 coord = gl_PointCoord - vec2(0.5);
+                        if(length(coord) > 0.5) discard;
+
+                        gl_FragColor = vec4(vColor, vOpacity);
+                    }
+                `,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.NormalBlending
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            let targetX = 0; let targetY = 0;
+            document.addEventListener('mousemove', (event) => {
+                targetX = (event.clientX / window.innerWidth) * 2 - 1;
+                targetY = -(event.clientY / window.innerHeight) * 2 + 1;
+            });
+
+            gsap.registerPlugin(ScrollTrigger);
+
+            gsap.to(material.uniforms.uProgress, {
+                value: 1,
+                ease: "power2.inOut",
+                scrollTrigger: {
+                    trigger: document.body,
+                    start: "top top",
+                    end: "bottom bottom",
+                    scrub: 1.0
+                }
+            });
+
+            gsap.fromTo(particles.rotation,
+                { y: Math.PI * -1.5, x: Math.PI / 4, z: Math.PI / 8 },
+                {
+                    y: 0, x: 0, z: 0,
+                    ease: "none",
+                    scrollTrigger: {
+                        trigger: document.body,
+                        start: "top top",
+                        end: "bottom bottom",
+                        scrub: 1.0
+                    }
+                }
+            );
+
+            const clock = new THREE.Clock();
+
+            // PERFORMANCE: Pausa a renderização quando o utilizador muda de separador (tab)
+            let isPageActive = true;
+            document.addEventListener("visibilitychange", () => {
+                isPageActive = !document.hidden;
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                if(isPageActive) {
+                    material.uniforms.uTime.value = clock.getElapsedTime();
+
+                    camera.position.x += (targetX * 3 - camera.position.x) * 0.05;
+                    camera.position.y += (targetY * 3 - camera.position.y) * 0.05;
+                    camera.lookAt(scene.position);
+
+                    renderer.render(scene, camera);
+                }
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        });
+    </script>
 </body>
 </html>

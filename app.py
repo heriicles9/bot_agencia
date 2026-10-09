@@ -71,6 +71,8 @@ DEFAULT_CONFIG = {
     "msg_comentario_publico": "Oi {nome}! Te chamei no direct.",
     "link_catalogo": "",
     "dados_extras": "",
+    "resp_direct": "sim",
+    "resp_comentarios": "sim",
     "fluxos": [{"gatilhos": "preço", "resposta": "R$ 99,00"}],
 }
 
@@ -349,6 +351,8 @@ def dashboard():
             config_atual['msg_comentario_publico'] = request.form.get('msg_comentario_publico')
             config_atual['link_catalogo'] = request.form.get('link_catalogo', '').strip()
             config_atual['dados_extras'] = request.form.get('dados_extras', '').strip()
+            config_atual['resp_direct'] = request.form.get('resp_direct', 'nao')
+            config_atual['resp_comentarios'] = request.form.get('resp_comentarios', 'nao')
 
             novos_fluxos = []
             for i in range(len(gatilhos_list)):
@@ -694,6 +698,14 @@ def registrar_consumo_ia(cliente):
         app.logger.exception("Falha ao registrar consumo da API Gemini (cliente %s).", cliente.id)
 
 def processar_mensagem(event, cliente):
+    config = (
+        cliente.config_json
+        if isinstance(cliente.config_json, dict)
+        else {}
+    )
+    if config.get('resp_direct', 'sim') == 'nao':
+        return
+
     sender_id = event.get('sender', {}).get('id')
     mensagem = event.get('message') or {}
     postback = event.get('postback') or {}
@@ -706,11 +718,7 @@ def processar_mensagem(event, cliente):
     if msg_id is not None and msg_id in mensagens_processadas:
         return
 
-    config = (
-        dict(cliente.config_json)
-        if isinstance(cliente.config_json, dict)
-        else {}
-    )
+    config = dict(config)
     pausados = config.get('pausados', [])
     if not isinstance(pausados, list):
         pausados = []
@@ -763,6 +771,14 @@ def processar_mensagem(event, cliente):
             registrar_consumo_ia(cliente)
 
 def processar_comentario(comentario, cliente):
+    config = (
+        cliente.config_json
+        if isinstance(cliente.config_json, dict)
+        else {}
+    )
+    if config.get('resp_comentarios', 'sim') == 'nao':
+        return
+
     texto = comentario.get('text', '').lower()
     comment_id = comentario.get('id')
     from_id = comentario.get('from', {}).get('id')
@@ -772,7 +788,7 @@ def processar_comentario(comentario, cliente):
 
     resposta_privada, usou_ia = encontrar_resposta(texto, cliente)
     if resposta_privada:
-        mascara = cliente.config_json.get('msg_comentario_publico', "Olá {nome}! Direct!")
+        mascara = config.get('msg_comentario_publico', "Olá {nome}! Direct!")
         enviar_resposta_publica(comment_id, mascara.replace("{nome}", f"@{username}"), cliente.token)
         enviar_private_reply(comment_id, resposta_privada, cliente.token)
         if usou_ia:

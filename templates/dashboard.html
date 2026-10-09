@@ -179,6 +179,8 @@
         .section-heading h2 { margin-bottom: 5px; font-size: 19px; letter-spacing: -.02em; }
         .section-heading p { margin-bottom: 0; color: var(--muted); font-size: 13px; }
         .rules-list { display: grid; gap: 12px; }
+        .permission-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; cursor: pointer; }
+        .permission-toggle input { width: auto; margin: 0; padding: 0; }
         .rule-card {
             position: relative;
             padding: 19px;
@@ -329,6 +331,18 @@
 
                 <form method="POST">
                     <fieldset {% if acesso_bloqueado %}disabled{% endif %} style="border:0;margin:0;padding:0">
+                        <section class="ai-card" aria-labelledby="permissions-title" style="margin-bottom:20px">
+                            <h3 id="permissions-title">Onde o robô deve atuar?</h3>
+                            <label class="permission-toggle">
+                                <input type="checkbox" name="resp_direct" value="sim" {% if config.get('resp_direct', 'sim') == 'sim' %}checked{% endif %}>
+                                Responder no Direct (mensagens privadas)
+                            </label>
+                            <label class="permission-toggle">
+                                <input type="checkbox" name="resp_comentarios" value="sim" {% if config.get('resp_comentarios', 'sim') == 'sim' %}checked{% endif %}>
+                                Responder em comentários de publicações
+                            </label>
+                        </section>
+
                         <div id="regras-container" class="rules-list">
                             {% for regra in config.fluxos %}
                             <div class="rule-card">
