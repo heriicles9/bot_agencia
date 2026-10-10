@@ -312,28 +312,45 @@ def callback():
         token = facebook.fetch_token(TOKEN_URL, client_secret=CLIENT_SECRET, authorization_response=request.url)
         user_token = token['access_token']
 
-        r = requests.get(f"https://graph.facebook.com/v18.0/me/accounts?access_token={user_token}")
-        paginas = r.json().get('data', [])
-        if not paginas: return "❌ Nenhuma página encontrada."
+        # 1. Busca as páginas já trazendo o ID do Instagram junto
+        url_contas = f"https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token={user_token}"
+        r = requests.get(url_contas)
+        dados_meta = r.json()
+        paginas = dados_meta.get('data', [])
 
-        pagina = paginas[0]
-        r_insta = requests.get(f"https://graph.facebook.com/v18.0/{pagina['id']}?fields=instagram_business_account&access_token={pagina['access_token']}")
-        insta_data = r_insta.json().get('instagram_business_account')
-        if not insta_data: return "❌ Página sem Instagram vinculado."
+        if not paginas:
+            return f"❌ Nenhuma página encontrada. Resposta da Meta: {dados_meta}"
 
-        requests.post(f"https://graph.facebook.com/v18.0/{pagina['id']}/subscribed_apps", data={"subscribed_fields": "feed,mentions,messages,messaging_postbacks,comments", "access_token": pagina['access_token']})
+        # 2. Procura em TODAS as páginas qual tem o Instagram vinculado
+        pagina_correta = None
+        insta_data = None
 
+        for pagina in paginas:
+            if 'instagram_business_account' in pagina:
+                pagina_correta = pagina
+                insta_data = pagina['instagram_business_account']
+                break # Encontrou! Para a busca.
+
+        if not pagina_correta:
+            return "❌ Nenhuma das páginas tem um Instagram de Negócios vinculado."
+
+        # 3. Assina os webhooks para a página correta
+        requests.post(f"https://graph.facebook.com/v18.0/{pagina_correta['id']}/subscribed_apps",
+                      data={"subscribed_fields": "feed,mentions,messages,messaging_postbacks,comments",
+                            "access_token": pagina_correta['access_token']})
+
+        # 4. Salva no Banco de Dados
         cliente_existente = db.session.get(Cliente, insta_data['id'])
 
         if cliente_existente:
-            cliente_existente.token = pagina['access_token']
-            cliente_existente.nome = pagina['name']
+            cliente_existente.token = pagina_correta['access_token']
+            cliente_existente.nome = pagina_correta['name']
             db.session.commit()
         else:
             validade_teste = datetime.now() + timedelta(days=7)
             config_padrao = copy.deepcopy(DEFAULT_CONFIG)
             config_padrao["segmento"] = None
-            novo_cliente = Cliente(insta_data['id'], pagina['name'], pagina['access_token'], "start", config_padrao, validade_teste)
+            novo_cliente = Cliente(insta_data['id'], pagina_correta['name'], pagina_correta['access_token'], "start", config_padrao, validade_teste)
             db.session.add(novo_cliente)
             db.session.commit()
 
@@ -341,7 +358,7 @@ def callback():
         return redirect("/dashboard")
 
     except Exception as e:
-        return f"Erro: {e}"
+        return f"Erro Crítico no Callback: {e}"
 
 @app.route("/onboarding", methods=['GET', 'POST'])
 def onboarding():
